@@ -4,22 +4,37 @@ pragma solidity >=0.7.0 <0.9.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract DaoOnDemand is Ownable {
+    address public DEPLOYER;
     string public NAME;
     string public SYMBOL;
+    uint256 public TOTAL_SUPPLY;
+    uint256 public TOTAL_AVAILABLE_FOR_SALE;
+    uint256 public AMOUNT_TO_RAISE;
+    uint256 public TOTAL_MINTED;
+    uint256 public PRICE_PER_COIN;
     
     mapping(address => uint256) public balances;
     mapping(address => mapping(address => uint256)) allowances;
 
-    address deployer;
-    uint256 totalMinted = 10000 * 1e18; // the amount that is already minted to the owner.
+    constructor(
+            address _daoOwner, 
+            string memory _name, 
+            string memory _symbol,
+            uint256 _totalSupply, 
+            uint256 _totalAvailableForSale,
+            uint256 _amountToRaise){
 
-    constructor(address _daoOwner, string memory _name, string memory _symbol){
-        deployer = _daoOwner;
-        transferOwnership(deployer);
-        balances[deployer] = 10000 * 1e18;
-
+        DEPLOYER = _daoOwner;
         NAME = _name;
         SYMBOL = _symbol;
+        TOTAL_SUPPLY = _totalSupply;
+        TOTAL_AVAILABLE_FOR_SALE = _totalAvailableForSale;
+        AMOUNT_TO_RAISE = _amountToRaise;
+
+        // transferOwnership(DEPLOYER);
+        balances[DEPLOYER] = (TOTAL_SUPPLY - TOTAL_AVAILABLE_FOR_SALE);
+        TOTAL_MINTED = TOTAL_SUPPLY - TOTAL_AVAILABLE_FOR_SALE;
+        PRICE_PER_COIN = AMOUNT_TO_RAISE / TOTAL_AVAILABLE_FOR_SALE;
     }
     
     
@@ -30,17 +45,33 @@ contract DaoOnDemand is Ownable {
     function symbol() public view returns (string memory) {
         return SYMBOL;
     }
+
+    function pricePerCoin() public view returns (uint256) {
+        return PRICE_PER_COIN;
+    }
+
+    function totalMinted() public view returns (uint256) {
+        return TOTAL_MINTED;
+    }
     
     function decimals() public pure returns (uint8) {
         return 18;
     }
     
-    function totalSupply() public pure returns (uint256) {
-        return 1000000 * 1e18; //1M
+    function totalSupply() public view returns (uint256) {
+        return TOTAL_SUPPLY;
+    }
+
+    function totalRaised() public view returns (uint256) {
+        return (TOTAL_MINTED - (TOTAL_SUPPLY - TOTAL_AVAILABLE_FOR_SALE))*PRICE_PER_COIN;
     }
     
     function balanceOf(address _owner) public view returns (uint256 balance) {
         return balances[_owner];    
+    }
+
+    function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
     }
     
     function transfer(address _to, uint256 _value) public returns (bool success) {
@@ -71,10 +102,11 @@ contract DaoOnDemand is Ownable {
         return allowances[_owner][_spender];
     }
 
-    function mint(address _to, uint256 _amount) public onlyOwner {
-        require(_amount + totalMinted < totalSupply(), "Not enough tokens left to mint");
-        balances[_to] += _amount;
-        totalMinted += _amount;
+    function mint(address _to, uint256 _coins) public payable onlyOwner {
+        balances[_to] += _coins;
+        TOTAL_MINTED += _coins;
     }
+
+    // Need to add a withdraw function
 
 }

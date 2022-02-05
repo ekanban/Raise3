@@ -5,41 +5,49 @@ import "./DaoOnDemand.sol";
 
 contract ParentContract {
     DaoOnDemand public newDao;
-    address public DaoAddress;
 
     mapping(address => DaoOnDemand[]) public addressToDao; 
 
     constructor(){}
 
-    function createDAO(string memory _name, string memory _symbol) public {
-        newDao = new DaoOnDemand(msg.sender, _name, _symbol);
+    function createDAO(
+            string memory _name, 
+            string memory _symbol, 
+            uint256 _totalSupply, 
+            uint256 _totalAvailableForSale,
+            uint256 _amountToRaise
+            ) public returns(address) {
+        newDao = new DaoOnDemand(msg.sender, _name, _symbol, _totalSupply, _totalAvailableForSale, _amountToRaise);
         addressToDao[msg.sender].push(newDao);
+        return address(newDao);
     }
 
-    function symbolFromParent() public view returns(string memory) {
-        return newDao.symbol();
+    function symbolFromParent(address _daoAddress) public view returns(string memory) {
+        return DaoOnDemand(_daoAddress).symbol();
     }
 
-    function nameFromParent() public view returns(string memory) {
-        return newDao.name();
+    function nameFromParent(address _daoAddress) public view returns(string memory) {
+        return DaoOnDemand(_daoAddress).name();
     }
 
-    function balanceOfFromParent(address _owner) public view returns(uint256 balance) {
-        return newDao.balanceOf(_owner);
+    function balanceOfFromParent(address _owner, address _daoAddress) public view returns(uint256 balance) {
+        return DaoOnDemand(_daoAddress).balanceOf(_owner);
     }
 
-    // function mintFromParent(address _to, uint256 _amount) public {
-    //     require(_amount + totalMinted < totalSupply(), "Not enough tokens left to mint");
-    //     newDao.balances[_to] += _amount;
-    //     totalMinted += _amount;
-    // }
+    function mintFromParent(address _daoAddress, uint _coins) public payable {
+        uint256 totalMinted = DaoOnDemand(_daoAddress).totalMinted();
+        uint256 totalSupply = DaoOnDemand(_daoAddress).totalSupply();
+        uint256 pricePerCoin = DaoOnDemand(_daoAddress).pricePerCoin();
 
-    // function getDeployedDaos() public view returns(address[] memory){
-    //     return addressToDao[msg.sender];
-    // }
+        require(_coins + totalMinted < totalSupply, "Not enough tokens left to mint");
+        require(msg.value >= _coins * pricePerCoin, "Not paid enough");
 
-    // function getDaosLength() public view returns(uint){
-    //     return addressToDao[msg.sender].length;
-    // }
+        DaoOnDemand(_daoAddress).mint(msg.sender, _coins);
+    }
+
+    function getContractBalanceFromParent(address _daoAddress) public view returns(uint256 balance){
+        return DaoOnDemand(_daoAddress).getContractBalance();
+    }
     
 }
+
