@@ -7,6 +7,8 @@ contract ParentContract {
     DaoOnDemand public newDao;
 
     mapping(address => DaoOnDemand[]) public addressToDao; 
+    mapping(address=>address) public ownerOf;
+    mapping(address=>uint256) public balanceOf;
 
     constructor(){}
 
@@ -19,6 +21,7 @@ contract ParentContract {
             ) public returns(address) {
         newDao = new DaoOnDemand(msg.sender, _name, _symbol, _totalSupply, _totalAvailableForSale, _amountToRaise);
         addressToDao[msg.sender].push(newDao);
+        ownerOf[address(newDao)] = msg.sender;
         return address(newDao);
     }
 
@@ -43,10 +46,16 @@ contract ParentContract {
         require(msg.value >= _coins * pricePerCoin, "Not paid enough");
 
         DaoOnDemand(_daoAddress).mint(msg.sender, _coins);
+        balanceOf[_daoAddress] += msg.value;
     }
 
     function getContractBalanceFromParent(address _daoAddress) public view returns(uint256 balance){
         return DaoOnDemand(_daoAddress).getContractBalance();
+    }
+
+    function withdrawFromParent(address _daoAddress) public {
+        require(ownerOf[_daoAddress] == msg.sender, "Only Owner can withdraw");
+        payable(msg.sender).transfer(balanceOf[_daoAddress]);
     }
     
 }
